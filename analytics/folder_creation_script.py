@@ -37,3 +37,5 @@ create_structure(dimensions, "dimensions")
 create_structure(facts, "facts")
 
 print("Folder structure for dimensions and facts created successfully in the current directory.")
+
+# This script is used to create the dim and facts formated directory
