@@ -1,0 +1,12 @@
+{
+  "source": ["aws.s3"],
+  "detail-type": ["Object Created"],
+  "detail": {
+    "bucket": {
+      "name": ["mia-dwh-staging-raw-us-east-1"]
+    },
+    "object": {
+      "key": ["triggers/account_transaction/trigger.trg"]
+    }
+  }
+}
