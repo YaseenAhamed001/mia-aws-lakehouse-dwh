@@ -14,3 +14,5 @@ LOCATION 's3://mia-dwh-analytics-us-east-1/analytics/dimensions/dim_date/'
 TBLPROPERTIES (
     'parquet.compress'='SNAPPY'
 );
+
+
