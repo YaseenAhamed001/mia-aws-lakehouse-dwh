@@ -99,9 +99,10 @@ ORDER BY applied last
 
 ROUND improves readability
 
-Interview Tip:
-Execution order:
-FROM → WHERE → GROUP BY → HAVING → SELECT → ORDER BY
+### Interview Tip:
+### Execution order:
+### FROM → WHERE → GROUP BY → HAVING → SELECT → ORDER BY
+
 ---
 
 ### ✅ Question 3 – Customers With More Than One Account
@@ -324,6 +325,7 @@ What happens if we use LEFT JOIN instead?
 
 👉 LEFT JOIN shows ALL customers
 👉 Even those without accounts (account columns become NULL)
+
 --- 
 
 ### ✅ Question 7 – Customers Who Do NOT Have Any Account
@@ -363,6 +365,7 @@ This pattern is called:
 👉 Anti Join
 
 Very common in migration validation.
+
 ---
 
 ### ✅ Question 8 – Total Balance Per Customer (Using JOIN + GROUP BY)
@@ -540,5 +543,203 @@ Memorize this. Interviewers ask this.
 
 ---
 
+# BATCH 3 – Subqueries Mastery
 
+### ✅ Question 11 – Accounts Above Their Own Account Type Average
+🟢 Easy Version:
+
+Each account_type (SAVINGS, CHECKING) has its own average balance.
+
+Write a query to find accounts whose balance is greater than the average balance of their own account_type.
+
+🟢 Query:
+```sql
+SELECT 
+    a.account_id,
+    a.account_type,
+    a.balance
+FROM staging.account a
+WHERE a.balance > (
+    SELECT AVG(a2.balance)
+    FROM staging.account a2
+    WHERE a2.account_type = a.account_type
+);
+```
+🧠 Explanation:
+
+This is a Correlated Subquery.
+
+Why?
+
+Because the inner query depends on the outer query:
+
+WHERE a2.account_type = a.account_type
+
+For each row in outer query:
+→ It calculates average of that account_type
+→ Then compares
+
+Important Interview Concept:
+Type	Runs How Many Times
+Normal subquery	Once
+Correlated subquery	Once per outer row
+
+Correlated can be slower on large data.
+
+---
+
+### ✅ Question 12 – Show Average Balance Along With Each Account
+🟢 Easy Version:
+
+For each account, show:
+
+account_id
+
+account_type
+
+balance
+
+overall average balance (same value repeated for all rows)
+
+🟢 Query:
+```sql
+SELECT 
+    account_id,
+    account_type,
+    balance,
+    (SELECT AVG(balance) FROM staging.account) AS overall_avg_balance
+FROM staging.account;
+```
+🧠 Explanation:
+
+This is a Scalar Subquery in SELECT.
+
+It returns a single value
+
+That value is attached to every row
+
+Since no correlation exists,
+→ It runs only once.
+
+Interview Trick:
+
+If subquery returns more than one row → ERROR.
+
+Scalar subquery must return exactly one value.
+
+---
+
+### ✅ Question 13 – Using Derived Table (Subquery in FROM)
+🟢 Easy Version:
+
+Find top 3 highest balance accounts.
+
+Use a subquery in FROM (derived table).
+
+🟢 Query:
+```sql
+SELECT *
+FROM (
+    SELECT 
+        account_id,
+        balance
+    FROM staging.account
+    ORDER BY balance DESC
+    LIMIT 3
+) AS top_accounts;
+```
+🧠 Explanation:
+
+This is called:
+
+👉 Derived table
+👉 Subquery in FROM
+
+The inner query runs first.
+
+Then outer query selects from it.
+
+Important:
+Every subquery in FROM must have an alias.
+
+`) AS top_accounts`
+
+Without alias → error.
+
+---
+
+### ✅ Question 14 – Using ALL Operator
+🟢 Easy Version:
+
+Find accounts whose balance is greater than ALL balances of INACTIVE accounts.
+
+🟢 Query:
+```sql
+SELECT 
+    account_id,
+    balance
+FROM staging.account
+WHERE balance > ALL (
+    SELECT balance
+    FROM staging.account
+    WHERE status = 'INACTIVE'
+);
+```
+🧠 Explanation:
+
+ALL means:
+
+Compare value with every value returned by subquery.
+
+So:
+
+balance > ALL (inactive balances)
+
+means:
+
+balance > highest inactive balance
+
+Interview Explanation:
+
+> ALL is equivalent to:
+
+balance > (SELECT MAX(balance) FROM ...)
+
+But ALL is more general.
+
+---
+
+### ✅ Question 15 – Using ANY Operator
+🟢 Easy Version:
+
+Find accounts whose balance is greater than ANY inactive account balance.
+
+🟢 Query:
+```sql
+SELECT 
+    account_id,
+    balance
+FROM staging.account
+WHERE balance > ANY (
+    SELECT balance
+    FROM staging.account
+    WHERE status = 'INACTIVE'
+);
+```
+🧠 Explanation:
+
+ANY means:
+
+If balance is greater than at least one inactive balance → return it.
+
+So logically:
+
+ANY ≈ greater than MIN(inactive balances)
+
+Important Difference:
+Operator	Meaning
+> ALL	greater than maximum
+> ANY	greater than minimum
+
+---
 
