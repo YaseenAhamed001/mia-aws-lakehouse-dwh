@@ -1,6 +1,6 @@
-## BATCH 1 (ETL Validation + Aggregation Logic)
+# BATCH 1 (ETL Validation + Aggregation Logic)
 
-## Question 1 – Data Quality Check (Null Analysis)
+### Question 1 – Data Quality Check (Null Analysis)
 ✅ Question 1 – Count Missing Values
 🟢 Easy Version:
 
@@ -56,7 +56,7 @@ SUM is often clearer in production.
 
 ---
 
-***✅ Question 2 – Total Balance per Account Type***
+### ✅ Question 2 – Total Balance per Account Type
 🟢 Easy Version:
 
 In the staging.account table:
@@ -104,7 +104,7 @@ Execution order:
 FROM → WHERE → GROUP BY → HAVING → SELECT → ORDER BY
 ---
 
-***✅ Question 3 – Customers With More Than One Account***
+### ✅ Question 3 – Customers With More Than One Account
 
 In the staging.account table:
 
@@ -166,7 +166,7 @@ All non-aggregated columns must be in GROUP BY.
 
 ---
 
-***✅ Question 4 – Rule Check (Business Logic Validation)***
+### ✅ Question 4 – Rule Check (Business Logic Validation)
 
 Business rule says:
 
@@ -211,7 +211,7 @@ Migration interviews LOVE this type.
 
 ---
 
-***✅ Question 5 – Top 3 Expensive Active Products***
+### ✅ Question 5 – Top 3 Expensive Active Products
 
 In staging.product:
 
@@ -258,5 +258,287 @@ LIMIT restricts output
 LIMIT happens after ORDER BY
 
 ---
+
+
+# BATCH 2 – JOINS & DATA COMPARISON
+
+### ✅ Question 6 – Customers Who Have Accounts
+🟢 Easy Version:
+
+We have two tables:
+
+staging.customer
+
+staging.account
+
+Write a query to show:
+
+customer_id
+
+first_name
+
+last_name
+
+account_id
+
+account_type
+
+balance
+
+Only show customers who actually have at least one account.
+
+🟢 Query:
+```sql
+SELECT 
+    c.customer_id,
+    c.first_name,
+    c.last_name,
+    a.account_id,
+    a.account_type,
+    a.balance
+FROM staging.customer c
+INNER JOIN staging.account a
+    ON c.customer_id = a.customer_id;
+```
+🧠 Explanation:
+🔹 INNER JOIN
+
+INNER JOIN returns only matching rows from both tables.
+
+Think like this:
+
+If customer_id exists in both tables → show it
+If not → ignore it
+
+🔹 ON condition
+
+ON c.customer_id = a.customer_id
+
+This tells SQL how the tables are related.
+
+Without this condition, SQL does not know how to match rows.
+
+Interview Follow-up:
+
+What happens if we use LEFT JOIN instead?
+
+👉 LEFT JOIN shows ALL customers
+👉 Even those without accounts (account columns become NULL)
+--- 
+
+### ✅ Question 7 – Customers Who Do NOT Have Any Account
+🟢 Easy Version:
+
+Write a query to show customers who do not have any account.
+
+🟢 Query:
+```sql
+SELECT 
+    c.customer_id,
+    c.first_name,
+    c.last_name
+FROM staging.customer c
+LEFT JOIN staging.account a
+    ON c.customer_id = a.customer_id
+WHERE a.customer_id IS NULL;
+```
+🧠 Explanation:
+🔹 Why LEFT JOIN?
+
+LEFT JOIN keeps all customers.
+
+If no matching account exists:
+→ account columns become NULL.
+
+🔹 Why WHERE a.customer_id IS NULL?
+
+This condition filters only those rows where:
+
+Join did NOT find match
+
+Therefore account is missing
+
+This pattern is called:
+
+👉 Anti Join
+
+Very common in migration validation.
+---
+
+### ✅ Question 8 – Total Balance Per Customer (Using JOIN + GROUP BY)
+🟢 Easy Version:
+
+Write a query to show:
+
+customer_id
+
+first_name
+
+last_name
+
+total balance of all their accounts
+
+Only include customers who have accounts.
+
+Sort by highest total balance.
+
+🟢 Query:
+```sql
+SELECT 
+    c.customer_id,
+    c.first_name,
+    c.last_name,
+    SUM(a.balance) AS total_balance
+FROM staging.customer c
+INNER JOIN staging.account a
+    ON c.customer_id = a.customer_id
+GROUP BY 
+    c.customer_id,
+    c.first_name,
+    c.last_name
+ORDER BY total_balance DESC;
+```
+🧠 Explanation:
+🔹 SUM(a.balance)
+
+Adds all balances per customer.
+
+🔹 GROUP BY
+
+Important rule:
+
+Every column in SELECT that is NOT aggregated
+must be inside GROUP BY.
+
+Why?
+
+Because SQL must know how to group rows.
+
+🔹 ORDER BY
+
+ORDER BY happens at the very end.
+It sorts final result set.
+
+---
+
+### ✅ Question 9 – Find Customers With Only INACTIVE Accounts
+🟢 Easy Version:
+
+Some customers may have multiple accounts.
+
+Write a query to find customers whose:
+
+All accounts are INACTIVE
+
+They should not have even one ACTIVE account
+
+🟢 Query:
+```sql
+SELECT 
+    c.customer_id,
+    c.first_name,
+    c.last_name
+FROM staging.customer c
+WHERE NOT EXISTS (
+    SELECT 1
+    FROM staging.account a
+    WHERE a.customer_id = c.customer_id
+      AND a.status = 'ACTIVE'
+);
+```
+🧠 Explanation:
+🔹 EXISTS
+
+Checks if at least one row exists.
+
+🔹 NOT EXISTS
+
+Returns customers where:
+No ACTIVE account exists.
+
+🔹 Why SELECT 1?
+
+We don’t care about actual data.
+We just check existence.
+So SELECT 1 is efficient and common practice.
+
+Advanced Understanding:
+
+This is better than:
+
+customer_id NOT IN (...)
+
+Because:
+
+If subquery returns NULL → NOT IN behaves differently.
+NOT EXISTS is safer.
+
+---
+
+### ✅ Question 10 – Join + Filter + Aggregate + HAVING
+🟢 Easy Version:
+
+Write a query to show:
+
+For each account_type:
+
+total number of customers
+
+total balance
+
+But only show account types where total balance is greater than 20,000.
+
+Sort by highest total balance.
+
+🟢 Query:
+```sql
+SELECT 
+    a.account_type,
+    COUNT(DISTINCT a.customer_id) AS total_customers,
+    SUM(a.balance) AS total_balance
+FROM staging.account a
+GROUP BY a.account_type
+HAVING SUM(a.balance) > 20000
+ORDER BY total_balance DESC;
+```
+🧠 Explanation:
+🔹 COUNT(DISTINCT a.customer_id)
+
+Counts unique customers per account type.
+
+Without DISTINCT:
+If customer has 2 accounts → counted twice.
+
+🔹 HAVING
+
+HAVING filters AFTER aggregation.
+
+You cannot use WHERE SUM(balance) > 20000
+
+That would cause error.
+
+
+## 🔹 Full Execution Order (Very Important for Interview)
+```sql
+FROM
+
+JOIN
+
+WHERE
+
+GROUP BY
+
+HAVING
+
+SELECT
+
+ORDER BY
+
+LIMIT
+```
+Memorize this. Interviewers ask this.
+
+---
+
 
 
